@@ -1,6 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-export const AiNodeForm = ({ data }: { data: { label: string } }) => {
+export const AiNodeForm = ({
+  node,
+  onUpdate,
+}: {
+  node: any;
+  onUpdate: (nodeId: string, data: any) => void;
+}) => {
   type FormState = {
     prompt: string;
     apiKey: string;
@@ -9,8 +15,8 @@ export const AiNodeForm = ({ data }: { data: { label: string } }) => {
   type FormErrors = Partial<Record<keyof FormState, string>>;
 
   const [form, setForm] = useState<FormState>({
-    prompt: "",
-    apiKey: "",
+    prompt: node.data.prompt || "",
+    apiKey: node.data.apiKey || "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
@@ -34,17 +40,21 @@ export const AiNodeForm = ({ data }: { data: { label: string } }) => {
     }));
   };
 
+  useEffect(() => {
+    setForm({
+      prompt: node.data.prompt || "",
+      apiKey: node.data.apiKey || "",
+    });
+  }, [node.id, node.data]);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validationErrors = validate(form);
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
-      console.log("Form submitted:", form);
       setSubmitted(true);
-
-      // Reset form after submission
-      setForm({ prompt: "", apiKey: "" });
+      onUpdate(node.id, form);
 
       // Hide success message after 3 seconds
       setTimeout(() => setSubmitted(false), 3000);
@@ -53,7 +63,7 @@ export const AiNodeForm = ({ data }: { data: { label: string } }) => {
 
   return (
     <div>
-      <h2>{data.label} Form</h2>
+      <h2>{node.data.label} Form</h2>
       {submitted && (
         <p style={{ color: "green" }}>Form submitted successfully!</p>
       )}

@@ -1,6 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-export const EmailNodeForm = ({ data }: { data: { label: string } }) => {
+export const EmailNodeForm = ({
+  node,
+  onUpdate,
+}: {
+  node: any;
+  onUpdate: (nodeId: string, data: any) => void;
+}) => {
   type FormState = {
     to: string;
     subject: string;
@@ -10,9 +16,9 @@ export const EmailNodeForm = ({ data }: { data: { label: string } }) => {
   type FormErrors = Partial<Record<keyof FormState, string>>;
 
   const [form, setForm] = useState<FormState>({
-    to: "",
-    subject: "",
-    body: "",
+    to: node.data.to || "",
+    subject: node.data.subject || "",
+    body: node.data.body || "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
@@ -38,6 +44,13 @@ export const EmailNodeForm = ({ data }: { data: { label: string } }) => {
       [id]: value,
     }));
   };
+  useEffect(() => {
+    setForm({
+      to: node.data.to || "",
+      subject: node.data.subject || "",
+      body: node.data.body || "",
+    });
+  }, [node.id, node.data]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,11 +58,11 @@ export const EmailNodeForm = ({ data }: { data: { label: string } }) => {
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
-      console.log("Form submitted:", form);
       setSubmitted(true);
+      onUpdate(node.id, form);
 
-      // Reset form after submission
-      setForm({ to: "", subject: "", body: "" });
+      // // Reset form after submission
+      // setForm({ to: "", subject: "", body: "" });
 
       // Hide success message after 3 seconds
       setTimeout(() => setSubmitted(false), 3000);
@@ -58,7 +71,7 @@ export const EmailNodeForm = ({ data }: { data: { label: string } }) => {
 
   return (
     <div>
-      <h2>AI Node Form - {data.label}</h2>
+      <h2>{node.data.label}</h2>
       {submitted && (
         <p style={{ color: "green" }}>Form submitted successfully!</p>
       )}

@@ -41,6 +41,17 @@ export default function WorkflowEditor() {
     emailNode: EmailNode,
   };
 
+  const updateNodeData = useCallback((nodeId: string, newData: any) => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        if (node.id === nodeId) {
+          return { ...node, data: { ...node.data, ...newData } };
+        }
+        return node;
+      })
+    );
+  }, []);
+
   const onNodesChange = useCallback(
     (
       changes: NodeChange<{
@@ -138,7 +149,9 @@ export default function WorkflowEditor() {
           Save Workflow
         </button>
       </div>
-      {selectedNode && <SettingsPanel node={selectedNode} />}
+      {selectedNode && (
+        <SettingsPanel node={selectedNode} onUpdateNodeData={updateNodeData} />
+      )}
     </div>
   );
 }
