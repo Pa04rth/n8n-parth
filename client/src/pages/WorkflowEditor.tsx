@@ -17,6 +17,7 @@ import { Sidebar } from "../components/layout/Sidebar";
 import { useRef } from "react";
 import { AiNode } from "../components/nodes/aiNode";
 import { EmailNode } from "../components/nodes/emailNode";
+import { SettingsPanel } from "../components/layout/SettingsPanel";
 
 const initialNodes = [
   { id: "n1", position: { x: 0, y: 0 }, data: { label: "jahanvi" } },
@@ -89,7 +90,7 @@ export default function WorkflowEditor() {
         id: `${nodes.length + 1}`,
         type,
         position,
-        data: { label: `${type} node` },
+        data: { label: `${type}` },
       };
       setNodes((nodes) => nodes.concat(newNode));
     },
@@ -137,6 +138,7 @@ export default function WorkflowEditor() {
           Save Workflow
         </button>
       </div>
+      {selectedNode && <SettingsPanel node={selectedNode} />}
     </div>
   );
 }
