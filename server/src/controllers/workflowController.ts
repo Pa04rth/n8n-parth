@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
+import { executeWorkflowLogic } from "../services/executionService";
 
 export const saveWorkflow = async (req: Request, res: Response) => {
   try {
@@ -27,7 +28,7 @@ export const saveWorkflow = async (req: Request, res: Response) => {
 
 export const getWorkflowById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // Destructuring is a bit cleaner
+    const { id } = req.params;
     const workflow = await prisma.workflow.findUnique({
       where: { id: id },
     });
@@ -44,13 +45,32 @@ export const getWorkflowById = async (req: Request, res: Response) => {
   }
 };
 
-export const executeWorkflow = (req: Request, res: Response) => {
+export const executeWorkflow = async (req: Request, res: Response) => {
   try {
-    const extracted_id = req.params.id;
+    const { id } = req.params;
+
+    //  full workflow from the database
+    const workflow = await prisma.workflow.findUnique({
+      where: { id: id },
+    });
+
+    //  Check if the workflow exists *before* doing anything else
+    if (!workflow) {
+      return res.status(404).json({ error: "Workflow not found" });
+    }
+    if (!Array.isArray(workflow.nodes) || !Array.isArray(workflow.edges)) {
+      return res.status(400).json({
+        error: "Invalid workflow data: nodes or edges are not arrays.",
+      });
+    }
+
+    const result = await executeWorkflowLogic(workflow.nodes, workflow.edges);
+
     return res
       .status(200)
-      .json({ message: `Executing workflow ${extracted_id}` });
+      .json({ message: "Workflow executed successfully", result: result });
   } catch (error) {
-    return res.status(500).json({ message: "Error executing workflow", error });
+    console.error("Error executing workflow:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
