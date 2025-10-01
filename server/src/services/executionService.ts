@@ -1,7 +1,11 @@
 import * as aiService from "./aiService";
 import * as emailService from "./emailService";
 
-export const executeWorkflowLogic = async (nodes: any[], edges: any[]) => {
+export const executeWorkflowLogic = async (
+  nodes: any[],
+  edges: any[],
+  userId: string
+) => {
   // A node is a trigger node if it's not a target of any edge.
   const targetIds = new Set(edges.map((edge) => edge.target));
   const triggerNode = nodes.find((node) => !targetIds.has(node.id));
@@ -33,16 +37,18 @@ export const executeWorkflowLogic = async (nodes: any[], edges: any[]) => {
         // Delegate the logic to the specific service for that node type
         currentNodeOutput = await aiService.process(
           currentNode.data,
-          previousNodeOutput
+          previousNodeOutput,
+          userId
         );
         break;
       case "emailNode":
         currentNodeOutput = await emailService.process(
           currentNode.data,
-          previousNodeOutput
+          previousNodeOutput,
+          userId
         );
         break;
-      // more case later...
+
       default:
         console.warn(
           `[Execution Engine] Unknown node type: ${currentNode.type}`

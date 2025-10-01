@@ -64,7 +64,11 @@ export const executeWorkflow = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await executeWorkflowLogic(workflow.nodes, workflow.edges);
+    const result = await executeWorkflowLogic(
+      workflow.nodes,
+      workflow.edges,
+      workflow.userId
+    );
 
     return res
       .status(200)
