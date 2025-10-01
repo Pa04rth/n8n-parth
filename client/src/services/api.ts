@@ -26,3 +26,18 @@ export async function saveWorkflow(workflowData: typeof workflow_object) {
     throw error;
   }
 }
+
+const credentials_object = {
+  type: "",
+  value: "",
+  userId: "",
+};
+export async function saveCredential(credentials: typeof credentials_object) {
+  try {
+    const Response = await axios.post("", credentials);
+    return Response.data;
+  } catch (error) {
+    console.log("Error saving the credentials", error);
+    throw error;
+  }
+}

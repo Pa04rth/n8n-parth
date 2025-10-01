@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { saveCredential } from "../../services/api";
 
 export const AiNodeForm = ({
   node,
@@ -47,17 +48,27 @@ export const AiNodeForm = ({
     });
   }, [node.id, node.data]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validationErrors = validate(form);
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
-      setSubmitted(true);
-      onUpdate(node.id, form);
+      try {
+        await saveCredential({
+          type: "OPENAI_API_KEY",
+          value: form.apiKey,
+          userId: "user-123",
+        });
 
-      // Hide success message after 3 seconds
-      setTimeout(() => setSubmitted(false), 3000);
+        onUpdate(node.id, { prompt: form.prompt });
+
+        setSubmitted(true);
+
+        setTimeout(() => setSubmitted(false), 3000);
+      } catch (error) {
+        console.error("Failed to save data:", error);
+      }
     }
   };
 
