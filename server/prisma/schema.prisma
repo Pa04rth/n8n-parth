@@ -51,6 +51,7 @@ enum CredentialType {
   OPENAI_API_KEY
   SLACK_WEBHOOK_URL
   EMAIL_PASSWORD
+  RESEND_API_KEY
 }
 
 model Credential {
