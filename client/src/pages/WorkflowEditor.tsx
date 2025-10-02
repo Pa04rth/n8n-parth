@@ -1,113 +1,141 @@
 import {
   Background,
   Controls,
-  EdgeChange,
   MiniMap,
-  NodeChange,
   ReactFlow,
   addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
+  useNodesState,
+  useEdgesState,
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useState } from "react";
-import { saveWorkflow } from "../services/api";
+import { useCallback, useState, useRef } from "react";
+import { saveWorkflow, executeWorkflow } from "../services/api";
 import { Sidebar } from "../components/layout/Sidebar";
-import { useRef } from "react";
 import { AiNode } from "../components/nodes/aiNode";
 import { EmailNode } from "../components/nodes/emailNode";
 import { SettingsPanel } from "../components/layout/SettingsPanel";
+import toast from "react-hot-toast";
 
 const initialNodes = [
-  { id: "n1", position: { x: 0, y: 0 }, data: { label: "jahanvi" } },
-  { id: "n2", position: { x: 0, y: 100 }, data: { label: "Node 2" } },
-  { id: "n3", position: { x: 0, y: 200 }, data: { label: "Node 3" } },
+  { id: "n1", position: { x: 100, y: 100 }, data: { label: "Start Node" } },
 ];
-const initialEdges = [
-  { id: "n1-n2", source: "n1", target: "n2" },
-  { id: "n2-n3", source: "n2", target: "n3" },
-];
+const initialEdges: any[] = [];
 
 export default function WorkflowEditor() {
   const [selectedNode, setSelectedNode] = useState(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
 
-  //Adding the custom nodes
+  // State Management Hooks
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+
+  // Custom Node Types
   const nodeTypes = {
     aiNode: AiNode,
     emailNode: EmailNode,
   };
 
-  const updateNodeData = useCallback((nodeId: string, newData: any) => {
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => {
-        if (node.id === nodeId) {
-          return { ...node, data: { ...node.data, ...newData } };
-        }
-        return node;
-      })
-    );
-  }, []);
+  // Function to update node data from the settings panel
+  const updateNodeData = useCallback(
+    (nodeId: string, newData: any) => {
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.id === nodeId) {
+            return { ...node, data: { ...node.data, ...newData } };
+          }
+          return node;
+        })
+      );
+    },
+    [setNodes]
+  );
 
-  const onNodesChange = useCallback(
-    (
-      changes: NodeChange<{
-        id: string;
-        position: { x: number; y: number };
-        data: { label: string };
-      }>[]
-    ) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange<{ id: string; source: string; target: string }>[]) =>
-      setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
-    []
-  );
+  // Handler for connecting nodes
   const onConnect = useCallback(
-    (params: any) =>
-      setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
-    []
+    (params: any) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault(); // to prevent the browser default behaviour
+    event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onSelectionChange = useCallback((elements: any) => {
-    if (elements && elements.nodes && elements.nodes.length > 0) {
-      setSelectedNode(elements.nodes[0]);
-    } else if (elements && elements.nodes && elements.nodes.length == 0) {
-      setSelectedNode(null);
-    }
   }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const type = event.dataTransfer.getData("application/reactflow");
+
       if (!type || !reactFlowBounds) return;
+
       const position = {
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
       };
 
       const newNode = {
-        id: `${nodes.length + 1}`,
+        id: `${type}-${+new Date()}`,
         type,
         position,
-        data: { label: `${type}` },
+        data: {
+          label: `${type} node`,
+          prompt: "",
+          to: "",
+          subject: "",
+          body: "",
+        },
       };
-      setNodes((nodes) => nodes.concat(newNode));
+
+      setNodes((nds) => nds.concat(newNode));
     },
-    [nodes]
+    [setNodes]
   );
-  console.log(selectedNode);
+
+  const onSelectionChange = useCallback(({ nodes }: { nodes: any[] }) => {
+    setSelectedNode(nodes.length > 0 ? nodes[0] : null);
+  }, []);
+
+  const handleSave = async () => {
+    const workflowData = {
+      name: "My Awesome Workflow",
+      nodes: nodes,
+      edges: edges,
+      userId: "user-123",
+    };
+
+    const promise = saveWorkflow(workflowData);
+
+    toast.promise(promise, {
+      loading: "Saving workflow...",
+      success: (savedWorkflow) => {
+        setWorkflowId(savedWorkflow.data.id);
+        return "Workflow saved successfully!";
+      },
+      error: "Failed to save workflow.",
+    });
+  };
+
+  // Handler for the "Execute" button
+  const handleExecute = async () => {
+    if (!workflowId) {
+      toast.error("You must save the workflow before executing it.");
+      return;
+    }
+
+    const promise = executeWorkflow(workflowId);
+
+    toast.promise(promise, {
+      loading: "Executing workflow...",
+      success: (data) =>
+        `Execution finished! Result: ${JSON.stringify(data.result)}`,
+      error: (err) =>
+        `Execution failed: ${err.response?.data?.error || err.message}`,
+    });
+  };
 
   return (
     <div
@@ -115,39 +143,61 @@ export default function WorkflowEditor() {
       ref={reactFlowWrapper}
     >
       <Sidebar />
-
       <div style={{ flexGrow: 1, position: "relative" }}>
         <ReactFlow
-          style={{ width: "100%", height: "100%" }}
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          fitView
-          onDragOver={onDragOver}
           onDrop={onDrop}
-          nodeTypes={nodeTypes}
+          onDragOver={onDragOver}
           onSelectionChange={onSelectionChange}
+          nodeTypes={nodeTypes}
+          fitView
         >
           <Controls />
           <MiniMap />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         </ReactFlow>
-        <button
-          style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}
-          className="text-blue-500"
-          onClick={() =>
-            saveWorkflow({
-              name: "My Workflow",
-              nodes: nodes,
-              edges: edges,
-              userId: Math.random().toString(36).substring(7),
-            })
-          }
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 10,
+            display: "flex",
+            gap: "10px",
+          }}
         >
-          Save Workflow
-        </button>
+          <button
+            onClick={handleSave}
+            style={{
+              padding: "8px 16px",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Save Workflow
+          </button>
+          <button
+            onClick={handleExecute}
+            disabled={!workflowId}
+            style={{
+              padding: "8px 16px",
+              background: !workflowId ? "#9ca3af" : "#10b981",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: !workflowId ? "not-allowed" : "pointer",
+            }}
+          >
+            Execute
+          </button>
+        </div>
       </div>
       {selectedNode && (
         <SettingsPanel node={selectedNode} onUpdateNodeData={updateNodeData} />

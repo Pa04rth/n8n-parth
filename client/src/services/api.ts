@@ -41,3 +41,14 @@ export async function saveCredential(credentials: typeof credentials_object) {
     throw error;
   }
 }
+export async function executeWorkflow(workflowId: string) {
+  try {
+    const { data } = await axios.post(
+      `http://localhost:3001/api/workflows/${workflowId}/execute`
+    );
+    return data;
+  } catch (error) {
+    console.error("Error executing workflow:", error);
+    throw error;
+  }
+}

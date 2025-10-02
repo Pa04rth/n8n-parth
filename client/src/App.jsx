@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useState } from "react";
+import Toaster from "react-hot-toast";
 
 const initialNodes = [
   { id: "n1", position: { x: 0, y: 0 }, data: { label: "Parth" } },
@@ -37,6 +38,7 @@ export default function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      <Toaster />
       <ReactFlow
         nodes={nodes}
         edges={edges}
